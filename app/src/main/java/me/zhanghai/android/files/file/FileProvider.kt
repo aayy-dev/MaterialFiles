@@ -19,6 +19,7 @@ import android.os.Handler
 import android.os.HandlerThread
 import android.os.ParcelFileDescriptor
 import android.os.Process
+import android.os.StrictMode
 import android.provider.DocumentsContract
 import android.provider.MediaStore
 import android.provider.OpenableColumns
@@ -29,6 +30,7 @@ import me.zhanghai.android.files.provider.common.getLastModifiedTime
 import me.zhanghai.android.files.provider.common.size
 import me.zhanghai.android.files.provider.document.documentUri
 import me.zhanghai.android.files.provider.document.isDocumentPath
+import me.zhanghai.android.files.util.withoutPenaltyDeathOnNetwork
 import java.io.FileNotFoundException
 import java.io.IOException
 import java.net.URI
@@ -65,7 +67,12 @@ class FileProvider : ContentProvider() {
         selection: String?,
         selectionArgs: Array<String?>?,
         sortOrder: String?
-    ): Cursor? {
+    ): Cursor? =
+        // Strict mode thread policy is passed through binder, and many apps query the display name
+        // and size on their main thread, which needs network access for remote files.
+        StrictMode::class.withoutPenaltyDeathOnNetwork { queryPath(uri, projection) }
+
+    private fun queryPath(uri: Uri, projection: Array<String?>?): Cursor {
         // ContentProvider has already checked granted permissions
         val projectionColumns = projection ?: getDefaultProjection()
         val path = uri.fileProviderPath
