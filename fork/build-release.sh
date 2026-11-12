@@ -103,7 +103,9 @@ for type in release debug; do
     cp "app/build/outputs/apk/$type/app-$type.apk" "$apk"
     echo "== $(basename "$apk") ($(du -h "$apk" | cut -f 1))"
     "$BUILD_TOOLS/apksigner" verify --print-certs "$apk" | grep -E 'DN|certificate SHA-256'
-    if ! "$BUILD_TOOLS/aapt2" dump badging "$apk" | grep -q "versionName='$VERSION_NAME'"; then
+    # Not grep -q, which can exit before aapt2 finishes writing and fail the pipeline.
+    if ! "$BUILD_TOOLS/aapt2" dump badging "$apk" | grep "versionName='$VERSION_NAME'" >/dev/null
+    then
         echo "Unexpected versionName in $apk" >&2
         exit 1
     fi
