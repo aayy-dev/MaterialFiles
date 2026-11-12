@@ -24,12 +24,16 @@
             android:layout_height="wrap_content"
             app:layout_scrollFlags="@integer/file_list_toolbar_scroll_flags">
 
+            <!-- Wraps content so that the subtitle isn't cut off when the font is taller than
+                 usual, with buttons centered like the title. -->
             <me.zhanghai.android.files.ui.CrossfadeSubtitleToolbar
                 android:id="@+id/toolbar"
                 android:layout_width="match_parent"
-                android:layout_height="?actionBarSize"
+                android:layout_height="wrap_content"
+                android:minHeight="?actionBarSize"
                 android:paddingStart="@dimen/file_list_toolbar_padding_start"
                 android:paddingEnd="@dimen/file_list_toolbar_padding_end_with_overflow"
+                app:buttonGravity="center_vertical"
                 app:navigationIcon="@drawable/menu_icon_control_normal_24dp"
                 app:navigationContentDescription="@string/open_navigation_drawer"
                 app:popupTheme="?actionBarPopupTheme"
@@ -38,11 +42,13 @@
             <me.zhanghai.android.files.ui.OverlayToolbar
                 android:id="@+id/overlayToolbar"
                 android:layout_width="match_parent"
-                android:layout_height="?actionBarSize"
+                android:layout_height="match_parent"
+                android:minHeight="?actionBarSize"
                 android:paddingStart="@dimen/file_list_toolbar_padding_start"
                 android:paddingEnd="@dimen/file_list_toolbar_padding_end_with_overflow"
                 android:background="?colorAppBarSurface"
                 android:visibility="gone"
+                app:buttonGravity="center_vertical"
                 app:navigationIcon="@drawable/close_icon_control_normal_24dp"
                 app:popupTheme="?actionBarPopupTheme" />
         </FrameLayout>
