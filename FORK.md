@@ -34,10 +34,12 @@ If upstream merges one of the PRs, drop the matching commits from `main` during 
 
 ## Releasing
 
-Tags are named `v<upstream versionName>-docsui-smb.<n>`, for example `v1.7.5-docsui-smb.1`. (The name predates the `main` branch, which used to be called `docsui-smb`.) Start `<n>` at 1 for each new upstream version, and increase it for rebuilds on the same upstream version. The version code and name inside the APK are upstream's.
+Tags are named `v<upstream versionName>.<n>`, for example `v1.7.5.2`. Start `<n>` at 1 for each new upstream version, and increase it for each rebuild on the same upstream version. The first release, `v1.7.5-docsui-smb.1`, predates this scheme, so 1.7.5 continues at `.2`.
+
+The build script rejects tags that don't match upstream's versionName. It sets the APKs' versionName to the tag's version (e.g. 1.7.5.2), so About shows which build is installed. The version code stays upstream's.
 
 ```sh
-TAG=v1.7.5-docsui-smb.2
+TAG=v1.7.5.2
 git tag -a "$TAG" -m "Material Files 1.7.5 + this fork's changes" main
 fork/build-release.sh "$TAG"           # writes build/fork-releases/$TAG/
 # Install the release APK on a device and test it before publishing.
@@ -48,10 +50,11 @@ gh release create "$TAG" --verify-tag --title "..." --notes-file notes.md \
 
 `fork/build-release.sh` builds from the committed tag, not the working tree. It:
 
-1. Applies [F-Droid's recipe for this app](https://gitlab.com/fdroid/fdroiddata/-/blob/master/metadata/me.zhanghai.android.files.yml): it deletes `app/src/main/java/me/zhanghai/android/files/nonfree` and every `//#ifdef NONFREE` … `//#endif` block, so the builds contain no Firebase.
-2. Limits native code to arm64-v8a.
-3. Builds the release and debug APKs.
-4. Checks their signatures and ABIs, writes `SHA256SUMS`, and keeps R8's `mapping-release.txt` for decoding stack traces from release builds.
+1. Checks the tag and sets the versionName from it.
+2. Applies [F-Droid's recipe for this app](https://gitlab.com/fdroid/fdroiddata/-/blob/master/metadata/me.zhanghai.android.files.yml): it deletes `app/src/main/java/me/zhanghai/android/files/nonfree` and every `//#ifdef NONFREE` … `//#endif` block, so the builds contain no Firebase.
+3. Limits native code to arm64-v8a.
+4. Builds the release and debug APKs.
+5. Checks their signatures, ABIs and versionName, writes `SHA256SUMS`, and keeps R8's `mapping-release.txt` for decoding stack traces from release builds.
 
 ## Signing
 

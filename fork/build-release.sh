@@ -4,8 +4,11 @@
 # tag), using F-Droid's recipe for this app: the nonfree (Firebase) code is removed. See FORK.md.
 #
 # Usage:
-#   fork/build-release.sh <tag> [ref]          Build into $OUT_DIR/<tag>/ (ref defaults to <tag>)
-#   fork/build-release.sh --prepare <dir> <ref>  Only export and patch the source into <dir>
+#   fork/build-release.sh <tag> [ref]
+#       Build into $OUT_DIR/<tag>/ (ref defaults to <tag>). The tag must be
+#       v<upstream versionName>.<n>, e.g. v1.7.5.2, and becomes the APKs' versionName (1.7.5.2).
+#   fork/build-release.sh --prepare <dir> <ref> [versionName]
+#       Only export and patch the source into <dir>.
 #
 # Environment:
 #   SIGNING_ENV  File exporting STORE_FILE, STORE_PASSWORD, KEY_ALIAS and KEY_PASSWORD for the
@@ -23,7 +26,7 @@ OUT_DIR=${OUT_DIR:-$REPO/build/fork-releases}
 if sed --version >/dev/null 2>&1; then sed_i() { sed -i "$@"; }; else sed_i() { sed -i '' "$@"; }; fi
 
 prepare() {
-    local src=$1 ref=$2
+    local src=$1 ref=$2 version_name=${3:-}
     mkdir -p "$src"
     git -C "$REPO" archive "$ref" | tar -x -C "$src"
     cd "$src/app"
@@ -45,15 +48,34 @@ prepare() {
         echo "abiFilters not added exactly once; check the layout of app/build.gradle" >&2
         exit 1
     fi
+    if [ -n "$version_name" ]; then
+        sed_i "s/^\(        versionName '\)[^']*'$/\1$version_name'/" build.gradle
+        if [ "$(grep -c "^        versionName '$version_name'$" build.gradle)" != 1 ]; then
+            echo "versionName not set; check the layout of app/build.gradle" >&2
+            exit 1
+        fi
+    fi
+}
+
+# Prints the upstream versionName at a ref.
+upstream_version_name() {
+    git -C "$REPO" show "$1:app/build.gradle" | sed -n "s/^        versionName '\(.*\)'$/\1/p"
 }
 
 if [ "${1:-}" = --prepare ]; then
-    prepare "${2:?--prepare needs <dir> <ref>}" "${3:?--prepare needs <dir> <ref>}"
+    prepare "${2:?--prepare needs <dir> <ref>}" "${3:?--prepare needs <dir> <ref>}" "${4:-}"
     exit 0
 fi
 
 TAG=${1:?usage: fork/build-release.sh <tag> [ref]}
 REF=${2:-$TAG}
+UPSTREAM_VERSION_NAME=$(upstream_version_name "$REF")
+VERSION_NAME=${TAG#v}
+if [[ ! $VERSION_NAME =~ ^${UPSTREAM_VERSION_NAME//./\\.}\.[1-9][0-9]*$ ]]; then
+    echo "Tag $TAG doesn't match the upstream version: use v$UPSTREAM_VERSION_NAME.<n>," \
+        "e.g. v$UPSTREAM_VERSION_NAME.1" >&2
+    exit 1
+fi
 OUT="$OUT_DIR/$TAG"
 if [ -e "$OUT" ]; then
     echo "$OUT already exists" >&2
@@ -70,7 +92,7 @@ fi
 SRC=$(mktemp -d "${TMPDIR:-/tmp}/materialfiles-release.XXXXXX")
 trap 'rm -rf "$SRC"' EXIT
 echo "Preparing $REF ($(git -C "$REPO" rev-parse --short "$REF^{commit}")) in $SRC"
-prepare "$SRC" "$REF"
+prepare "$SRC" "$REF" "$VERSION_NAME"
 
 cd "$SRC"
 ./gradlew --console=plain assembleRelease assembleDebug
@@ -81,6 +103,11 @@ for type in release debug; do
     cp "app/build/outputs/apk/$type/app-$type.apk" "$apk"
     echo "== $(basename "$apk") ($(du -h "$apk" | cut -f 1))"
     "$BUILD_TOOLS/apksigner" verify --print-certs "$apk" | grep -E 'DN|certificate SHA-256'
+    if ! "$BUILD_TOOLS/aapt2" dump badging "$apk" | grep -q "versionName='$VERSION_NAME'"; then
+        echo "Unexpected versionName in $apk" >&2
+        exit 1
+    fi
+    echo "   versionName: $VERSION_NAME"
     abis=$(zipinfo -1 "$apk" | grep '^lib/' | cut -d / -f 2 | sort -u | tr '\n' ' ')
     echo "   Native ABIs: $abis"
     if [ "$abis" != "arm64-v8a " ]; then
