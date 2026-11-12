@@ -5,6 +5,7 @@
 package me.zhanghai.android.files.filelist
 
 import android.app.Dialog
+import android.content.ActivityNotFoundException
 import android.content.ComponentName
 import android.content.Context
 import android.content.DialogInterface
@@ -14,9 +15,13 @@ import android.content.pm.PackageManager
 import android.graphics.drawable.Drawable
 import android.os.Bundle
 import android.view.ViewGroup
+import android.widget.LinearLayout
+import android.widget.RadioGroup
 import androidx.annotation.DrawableRes
 import androidx.appcompat.app.AppCompatDialogFragment
+import androidx.core.view.children
 import androidx.core.view.isVisible
+import androidx.core.view.updateLayoutParams
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -34,11 +39,11 @@ import me.zhanghai.android.files.file.MimeType
 import me.zhanghai.android.files.ui.SimpleAdapter
 import me.zhanghai.android.files.util.ParcelableArgs
 import me.zhanghai.android.files.util.ParcelableParceler
-import me.zhanghai.android.files.util.args
 import me.zhanghai.android.files.util.createIntent
 import me.zhanghai.android.files.util.finish
 import me.zhanghai.android.files.util.layoutInflater
 import me.zhanghai.android.files.util.putArgs
+import me.zhanghai.android.files.util.showToast
 import me.zhanghai.android.files.util.startActivitySafe
 import me.zhanghai.android.files.util.withChooser
 import me.zhanghai.android.files.viewer.text.TextEditorActivity
@@ -49,7 +54,12 @@ import java.text.Collator
  * all files with its extension.
  */
 class OpenWithDialogFragment : AppCompatDialogFragment() {
-    private val args by args<Args>()
+    // Read from the host activity instead of being copied into fragment arguments, because the
+    // intent can carry a long list of image paths for the image viewer.
+    private val args: Args
+        get() = (requireActivity() as OpenWithDialogActivity).args
+
+    private var isItemClicked = false
 
     private lateinit var binding: OpenWithDialogBinding
 
@@ -61,7 +71,20 @@ class OpenWithDialogFragment : AppCompatDialogFragment() {
             .apply {
                 binding = OpenWithDialogBinding.inflate(context.layoutInflater)
                 val extensionKey = args.path.openWithExtensionKey
+                binding.rememberGroup.isVisible =
+                    args.canRememberForFile || args.canRememberForExtension
                 binding.fileRadio.isVisible = args.canRememberForFile
+                binding.extensionRadio.isVisible = args.canRememberForExtension
+                if (resources.configuration.screenHeightDp < SHORT_SCREEN_HEIGHT_DP) {
+                    // Leave room for the list, e.g. on a phone in landscape.
+                    binding.rememberGroup.orientation = LinearLayout.HORIZONTAL
+                    binding.rememberGroup.children.forEach {
+                        it.updateLayoutParams<RadioGroup.LayoutParams> {
+                            width = 0
+                            weight = 1f
+                        }
+                    }
+                }
                 binding.fileRadio.text = getString(
                     R.string.file_open_with_remember_always_format,
                     OpenWithDefault.Scope.FILE.getDescription(extensionKey, context)
@@ -78,7 +101,7 @@ class OpenWithDialogFragment : AppCompatDialogFragment() {
                 updateDefault()
                 loadItems()
             }
-            .setNegativeButton(android.R.string.cancel, null)
+            .setNegativeButton(android.R.string.cancel) { _, _ -> finish() }
             .create()
 
     private fun updateDefault() {
@@ -120,6 +143,10 @@ class OpenWithDialogFragment : AppCompatDialogFragment() {
     }
 
     private fun onItemClicked(item: OpenWithItem) {
+        if (isItemClicked) {
+            return
+        }
+        isItemClicked = true
         when (item.type) {
             OpenWithItem.Type.APP -> {
                 val component = item.component!!
@@ -128,17 +155,22 @@ class OpenWithDialogFragment : AppCompatDialogFragment() {
                     R.id.extensionRadio -> OpenWithDefault.Scope.EXTENSION
                     else -> null
                 }
-                if (scope != null) {
+                // Only remember an app once it has been started successfully.
+                if (startActivityOrShowError(Intent(args.intent).setComponent(component)) &&
+                    scope != null) {
                     OpenWithDefaults.set(
                         args.path, scope, component, args.intent.type ?: MimeType.ANY.value
                     )
                 }
-                startActivitySafe(Intent(args.intent).setComponent(component))
             }
             OpenWithItem.Type.OPEN_AS ->
                 startActivitySafe(
                     OpenFileAsDialogActivity::class.createIntent()
-                        .putArgs(OpenFileAsDialogFragment.Args(args.path, args.canRememberForFile))
+                        .putArgs(
+                            OpenFileAsDialogFragment.Args(
+                                args.path, args.canRememberForFile, args.canRememberForExtension
+                            )
+                        )
                 )
             OpenWithItem.Type.EDIT ->
                 // Use the system chooser so that an "Always" choice can't be made for editing.
@@ -147,8 +179,24 @@ class OpenWithDialogFragment : AppCompatDialogFragment() {
         finish()
     }
 
-    override fun onDismiss(dialog: DialogInterface) {
-        super.onDismiss(dialog)
+    private fun startActivityOrShowError(intent: Intent): Boolean =
+        try {
+            startActivity(intent)
+            true
+        } catch (e: ActivityNotFoundException) {
+            e.printStackTrace()
+            showToast(R.string.activity_not_found)
+            false
+        } catch (e: SecurityException) {
+            e.printStackTrace()
+            showToast(R.string.activity_not_found)
+            false
+        }
+
+    // Not onDismiss(), which is also called when the dialog is recreated for a configuration
+    // change.
+    override fun onCancel(dialog: DialogInterface) {
+        super.onCancel(dialog)
 
         finish()
     }
@@ -160,6 +208,11 @@ class OpenWithDialogFragment : AppCompatDialogFragment() {
         val intent: Intent,
         /** Whether a default can be remembered for this exact file, e.g. not for a temp copy. */
         val canRememberForFile: Boolean,
+        /**
+         * Whether a default can be remembered for the file's extension, e.g. not for files that
+         * are opened in this app instead, like APKs and archives.
+         */
+        val canRememberForExtension: Boolean,
         /** Whether to ask even if there's a default. */
         val alwaysAsk: Boolean,
         /** Whether to list every app that matches the intent, even for files of unknown type. */
@@ -174,6 +227,7 @@ class OpenWithDialogFragment : AppCompatDialogFragment() {
         ): List<OpenWithItem> {
             val packageManager = context.packageManager
             val queryIntent = Intent(intent).setComponent(null)
+                .apply { replaceExtras(null as Bundle?) }
             // Files of unknown type are opened as any type, which matches every app that accepts
             // some type, e.g. calendars and contacts. Unless asked for every app, only list the
             // apps that accept generic files, plus the text editor.
@@ -182,10 +236,16 @@ class OpenWithDialogFragment : AppCompatDialogFragment() {
                 // Calling setType() will clear data.
                 queryIntent.setDataAndType(intent.data, MimeType.GENERIC.value)
             }
-            @Suppress("DEPRECATION")
-            val apps = packageManager.queryIntentActivities(
-                queryIntent, PackageManager.MATCH_DEFAULT_ONLY
-            ).mapTo(mutableListOf()) {
+            val resolveInfos = try {
+                @Suppress("DEPRECATION")
+                packageManager.queryIntentActivities(queryIntent, PackageManager.MATCH_DEFAULT_ONLY)
+            } catch (e: Exception) {
+                e.printStackTrace()
+                emptyList()
+            }
+            val apps = resolveInfos.filter { it.activityInfo.canBeStartedBy(context) }.mapTo(
+                mutableListOf()
+            ) {
                 AppInfo(
                     it.activityInfo, it.loadLabel(packageManager).toString(),
                     it.loadIcon(packageManager), packageManager
@@ -230,10 +290,15 @@ class OpenWithDialogFragment : AppCompatDialogFragment() {
                         context.getString(R.string.file_open_as_title), null
                     )
                 )
-                @Suppress("DEPRECATION")
-                val canEdit = packageManager.queryIntentActivities(
-                    intent.toEditIntent(), PackageManager.MATCH_DEFAULT_ONLY
-                ).isNotEmpty()
+                val canEdit = try {
+                    @Suppress("DEPRECATION")
+                    packageManager.queryIntentActivities(
+                        intent.toEditIntent(), PackageManager.MATCH_DEFAULT_ONLY
+                    ).isNotEmpty()
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                    false
+                }
                 if (canEdit) {
                     add(
                         OpenWithItem(
@@ -245,6 +310,21 @@ class OpenWithDialogFragment : AppCompatDialogFragment() {
             }
             return appItems + otherItems
         }
+
+        /**
+         * Whether another app's activity can be started by this app; the system resolver leaves
+         * out the ones that can't.
+         */
+        private fun ActivityInfo.canBeStartedBy(context: Context): Boolean =
+            packageName == context.packageName || (
+                exported && (
+                    permission == null ||
+                        context.checkSelfPermission(permission) ==
+                        PackageManager.PERMISSION_GRANTED
+                    )
+                )
+
+        private const val SHORT_SCREEN_HEIGHT_DP = 480
 
         private fun Intent.toEditIntent(): Intent =
             Intent(Intent.ACTION_EDIT)
@@ -272,6 +352,7 @@ class OpenWithDialogFragment : AppCompatDialogFragment() {
  * @param intent The view intent for the file.
  * @param alwaysAsk Whether to let the user choose even if there's a remembered app.
  * @param canRememberForFile Whether a choice can be remembered for this exact file.
+ * @param canRememberForExtension Whether a choice can be remembered for the file's extension.
  * @param showAllApps Whether to list every app that matches the intent's MIME type, even when it's
  * any type.
  */
@@ -280,13 +361,16 @@ fun Context.openFileWithApp(
     intent: Intent,
     alwaysAsk: Boolean,
     canRememberForFile: Boolean = true,
+    canRememberForExtension: Boolean = true,
     showAllApps: Boolean = false
 ) {
     if (!alwaysAsk && OpenWithDefaults.open(path, intent, this)) {
         return
     }
     startActivitySafe(
-        createOpenFileWithAppIntent(path, intent, true, canRememberForFile, showAllApps)
+        createOpenFileWithAppIntent(
+            path, intent, true, canRememberForFile, canRememberForExtension, showAllApps
+        )
     )
 }
 
@@ -296,11 +380,14 @@ fun createOpenFileWithAppIntent(
     intent: Intent,
     alwaysAsk: Boolean,
     canRememberForFile: Boolean = true,
+    canRememberForExtension: Boolean = true,
     showAllApps: Boolean = false
 ): Intent =
     OpenWithDialogActivity::class.createIntent()
         .putArgs(
-            OpenWithDialogFragment.Args(path, intent, canRememberForFile, alwaysAsk, showAllApps)
+            OpenWithDialogFragment.Args(
+                path, intent, canRememberForFile, canRememberForExtension, alwaysAsk, showAllApps
+            )
         )
 
 private data class OpenWithItem(

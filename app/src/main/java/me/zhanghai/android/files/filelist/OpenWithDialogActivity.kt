@@ -9,10 +9,9 @@ import android.view.View
 import androidx.fragment.app.commit
 import me.zhanghai.android.files.app.AppActivity
 import me.zhanghai.android.files.util.args
-import me.zhanghai.android.files.util.putArgs
 
 class OpenWithDialogActivity : AppActivity() {
-    private val args by args<OpenWithDialogFragment.Args>()
+    val args by args<OpenWithDialogFragment.Args>()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -24,7 +23,7 @@ class OpenWithDialogActivity : AppActivity() {
                 finish()
                 return
             }
-            val fragment = OpenWithDialogFragment().putArgs(args)
+            val fragment = OpenWithDialogFragment()
             supportFragmentManager.commit {
                 add(fragment, OpenWithDialogFragment::class.java.name)
             }

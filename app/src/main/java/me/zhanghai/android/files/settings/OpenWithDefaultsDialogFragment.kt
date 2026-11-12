@@ -38,7 +38,7 @@ class OpenWithDefaultsDialogFragment : AppCompatDialogFragment() {
             .apply {
                 if (defaults.isEmpty()) {
                     setMessage(R.string.settings_open_with_defaults_empty)
-                    setPositiveButton(android.R.string.ok, null)
+                    setPositiveButton(android.R.string.ok) { _, _ -> finish() }
                 } else {
                     val items = defaults.map { it.getDisplayText(context) }
                         .toTypedArray<CharSequence>()
@@ -50,11 +50,13 @@ class OpenWithDefaultsDialogFragment : AppCompatDialogFragment() {
                         OpenWithDefaults.remove(defaults.filterIndexed { index, _ ->
                             checkedItems[index]
                         })
+                        finish()
                     }
                     setNeutralButton(R.string.settings_open_with_defaults_remove_all) { _, _ ->
                         OpenWithDefaults.remove(defaults)
+                        finish()
                     }
-                    setNegativeButton(android.R.string.cancel, null)
+                    setNegativeButton(android.R.string.cancel) { _, _ -> finish() }
                 }
             }
             .create()
@@ -73,8 +75,10 @@ class OpenWithDefaultsDialogFragment : AppCompatDialogFragment() {
         outState.putBooleanArray(STATE_CHECKED_ITEMS, checkedItems)
     }
 
-    override fun onDismiss(dialog: DialogInterface) {
-        super.onDismiss(dialog)
+    // Not onDismiss(), which is also called when the dialog is recreated for a configuration
+    // change.
+    override fun onCancel(dialog: DialogInterface) {
+        super.onCancel(dialog)
 
         finish()
     }

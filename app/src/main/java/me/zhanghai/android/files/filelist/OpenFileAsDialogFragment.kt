@@ -43,7 +43,7 @@ class OpenFileAsDialogFragment : AppCompatDialogFragment() {
             .apply { extraPath = args.path }
         requireContext().openFileWithApp(
             args.path, intent, alwaysAsk = true, canRememberForFile = args.canRememberForFile,
-            showAllApps = true
+            canRememberForExtension = args.canRememberForExtension, showAllApps = true
         )
         finish()
     }
@@ -68,6 +68,7 @@ class OpenFileAsDialogFragment : AppCompatDialogFragment() {
     @Parcelize
     class Args(
         val path: @WriteWith<ParcelableParceler> Path,
-        val canRememberForFile: Boolean = true
+        val canRememberForFile: Boolean = true,
+        val canRememberForExtension: Boolean = true
     ) : ParcelableArgs
 }

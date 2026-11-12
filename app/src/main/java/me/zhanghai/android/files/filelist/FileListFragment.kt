@@ -1360,6 +1360,9 @@ class FileListFragment : Fragment(), BreadcrumbLayout.Listener, FileListAdapter.
     private fun openFileWithIntent(file: FileItem, withChooser: Boolean) {
         val path = file.path
         val mimeType = file.mimeType
+        // APKs and browsable archives are opened in this app when tapped, so a default app
+        // wouldn't be used for them.
+        val canRemember = !mimeType.isApk && !file.isListable
         if (path.isArchivePath) {
             FileJobService.open(path, mimeType, withChooser, requireContext())
         } else {
@@ -1369,7 +1372,10 @@ class FileListFragment : Fragment(), BreadcrumbLayout.Listener, FileListAdapter.
                     extraPath = path
                     maybeAddImageViewerActivityExtras(this, path, mimeType)
                 }
-            requireActivity().openFileWithApp(path, intent, alwaysAsk = withChooser)
+            requireActivity().openFileWithApp(
+                path, intent, alwaysAsk = withChooser, canRememberForFile = canRemember,
+                canRememberForExtension = canRemember
+            )
         }
     }
 

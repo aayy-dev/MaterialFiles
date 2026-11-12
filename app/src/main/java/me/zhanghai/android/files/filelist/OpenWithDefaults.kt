@@ -13,6 +13,9 @@ import android.os.Parcelable
 import java8.nio.file.Path
 import kotlinx.parcelize.Parcelize
 import me.zhanghai.android.files.R
+import me.zhanghai.android.files.file.MimeType
+import me.zhanghai.android.files.file.guessFromExtension
+import me.zhanghai.android.files.file.intentType
 import me.zhanghai.android.files.settings.Settings
 import me.zhanghai.android.files.util.asFileNameOrNull
 import me.zhanghai.android.files.util.valueCompat
@@ -90,12 +93,22 @@ fun Intent.withOpenWithTarget(component: ComponentName, mimeType: String): Inten
         .setComponent(component)
 
 object OpenWithDefaults {
-    fun find(path: Path): OpenWithDefault? {
+    /**
+     * Finds the default for a file.
+     *
+     * @param intentType The file's own intent MIME type, if known. A file whose type isn't the one
+     * its name implies (e.g. a document from a provider) isn't covered by its extension's default.
+     */
+    fun find(path: Path, intentType: String? = null): OpenWithDefault? {
         val defaults = Settings.OPEN_WITH_DEFAULTS.valueCompat
         val fileKey = path.openWithFileKey
         defaults.find { it.scope == OpenWithDefault.Scope.FILE && it.key == fileKey }
             ?.let { return it }
         val extensionKey = path.openWithExtensionKey
+        if (intentType != null &&
+            intentType != MimeType.guessFromExtension(extensionKey).intentType) {
+            return null
+        }
         return defaults.find {
             it.scope == OpenWithDefault.Scope.EXTENSION && it.key == extensionKey
         }
@@ -126,7 +139,7 @@ object OpenWithDefaults {
      * @return Whether the file was opened.
      */
     fun open(path: Path, intent: Intent, context: Context): Boolean {
-        val default = find(path) ?: return false
+        val default = find(path, intent.type) ?: return false
         return try {
             context.startActivity(intent.withOpenWithTarget(default.component, default.mimeType))
             true
