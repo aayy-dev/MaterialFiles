@@ -43,8 +43,7 @@ import me.zhanghai.android.files.file.MimeType
 import me.zhanghai.android.files.file.asFileSize
 import me.zhanghai.android.files.file.fileProviderUri
 import me.zhanghai.android.files.file.loadFileItem
-import me.zhanghai.android.files.filelist.OpenFileAsDialogActivity
-import me.zhanghai.android.files.filelist.OpenFileAsDialogFragment
+import me.zhanghai.android.files.filelist.createOpenFileWithAppIntent
 import me.zhanghai.android.files.provider.archive.archiveFile
 import me.zhanghai.android.files.provider.archive.archiver.ArchiveWriter
 import me.zhanghai.android.files.provider.archive.createArchiveRootPath
@@ -95,7 +94,6 @@ import me.zhanghai.android.files.util.getQuantityString
 import me.zhanghai.android.files.util.putArgs
 import me.zhanghai.android.files.util.showToast
 import me.zhanghai.android.files.util.toEnumSet
-import me.zhanghai.android.files.util.withChooser
 
 fun FileJob.getString(@StringRes stringRes: Int): String {
     return service.getString(stringRes)
@@ -1480,19 +1478,13 @@ class OpenFileJob(
             file, R.string.file_open_from_background_title_format,
             R.string.file_open_from_background_text
         ) { file ->
-            file.fileProviderUri.createViewIntent(mimeType)
+            val intent = file.fileProviderUri.createViewIntent(mimeType)
                 .addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
                 .apply { extraPath = file }
-                .let {
-                    if (withChooser) {
-                        it.withChooser(
-                            OpenFileAsDialogActivity::class.createIntent()
-                                .putArgs(OpenFileAsDialogFragment.Args(file))
-                        )
-                    } else {
-                        it
-                    }
-                }
+            // The file is a temporary copy, so only remember choices by extension.
+            createOpenFileWithAppIntent(
+                file, intent, alwaysAsk = withChooser, canRememberForFile = false
+            )
         }
     }
 }

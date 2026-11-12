@@ -17,7 +17,6 @@ import me.zhanghai.android.files.filejob.FileJobService
 import me.zhanghai.android.files.provider.archive.isArchivePath
 import me.zhanghai.android.files.util.createViewIntent
 import me.zhanghai.android.files.util.extraPath
-import me.zhanghai.android.files.util.startActivitySafe
 
 class OpenFileActivity : AppActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -39,7 +38,7 @@ class OpenFileActivity : AppActivity() {
             val intent = path.fileProviderUri.createViewIntent(mimeType)
                 .addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
                 .apply { extraPath = path }
-            startActivitySafe(intent)
+            openFileWithApp(path, intent, alwaysAsk = false)
         }
     }
 

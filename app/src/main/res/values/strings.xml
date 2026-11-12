@@ -237,6 +237,18 @@
     <string name="file_install_apk_from_background_text">Tap to install</string>
     <string name="file_open_from_background_title_format">“%1$s” is ready to be opened</string>
     <string name="file_open_from_background_text">Tap to open</string>
+    <string name="file_open_with_title_format">Open “%1$s” with</string>
+    <string name="file_open_with_remember_once">Just once</string>
+    <string name="file_open_with_remember_always_format">Always for %1$s</string>
+    <string name="file_open_with_scope_file">this file</string>
+    <string name="file_open_with_scope_extension_format">.%1$s files</string>
+    <string name="file_open_with_scope_no_extension">files without an extension</string>
+    <string name="file_open_with_default_format">Default for %1$s: %2$s</string>
+    <string name="file_open_with_default_badge">Default</string>
+    <string name="file_open_with_clear_default">Clear</string>
+    <string name="file_open_with_edit">Edit with…</string>
+    <string name="file_open_with_app_label_format">%1$s (%2$s)</string>
+    <string name="file_open_with_app_not_installed">App not installed</string>
     <string name="file_name_error_empty">File name cannot be empty</string>
     <string name="file_name_error_invalid">Invalid file name</string>
     <string name="file_name_error_already_exists">A file with this name already exists</string>
@@ -795,6 +807,17 @@
         <item quantity="other">%1$,d locations granted</item>
     </plurals>
     <string name="settings_revoke_external_root_access_done">Root access revoked for all other apps</string>
+    <string name="settings_open_with_defaults_title">Default apps for opening files</string>
+    <string name="settings_open_with_defaults_summary_empty">Choose “Always” when opening a file to add one</string>
+    <plurals name="settings_open_with_defaults_summary_format">
+        <item quantity="one">%d default app</item>
+        <item quantity="other">%d default apps</item>
+    </plurals>
+    <string name="settings_open_with_defaults_empty">No default apps yet. When opening a file, choose “Always for this file” or “Always for” its extension to add one.</string>
+    <string name="settings_open_with_defaults_item_format">%1$s: %2$s</string>
+    <string name="settings_open_with_defaults_no_extension">Files without an extension</string>
+    <string name="settings_open_with_defaults_remove">Remove</string>
+    <string name="settings_open_with_defaults_remove_all">Remove all</string>
     <string name="file_list_pick_root_access_title">Allow root access?</string>
     <string name="file_list_pick_root_access_message_format">%1$s will be able to access the following using root or Shizuku, including anything inside folders:\n\n%2$s</string>
     <string name="file_list_pick_root_access_unknown_app">The requesting app</string>

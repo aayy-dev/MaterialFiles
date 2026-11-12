@@ -107,6 +107,10 @@
             android:entryValues="@array/pref_entry_values_open_apk_default_action"
             app:useSimpleSummaryProvider="true" />
 
+        <me.zhanghai.android.files.settings.OpenWithDefaultsPreference
+            android:title="@string/settings_open_with_defaults_title"
+            android:summary="@string/settings_open_with_defaults_summary_empty" />
+
         <SwitchPreferenceCompat
             android:key="@string/pref_key_show_pdf_thumbnail_pre_28"
             android:title="@string/settings_show_pdf_thumbnail_pre_28_title"

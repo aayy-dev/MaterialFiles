@@ -170,6 +170,16 @@
             android:theme="@style/Theme.MaterialFiles.Translucent" />
 
         <activity
+            android:name="me.zhanghai.android.files.filelist.OpenWithDialogActivity"
+            android:autoRemoveFromRecents="true"
+            android:theme="@style/Theme.MaterialFiles.Translucent" />
+
+        <activity
+            android:name="me.zhanghai.android.files.settings.OpenWithDefaultsDialogActivity"
+            android:autoRemoveFromRecents="true"
+            android:theme="@style/Theme.MaterialFiles.Translucent" />
+
+        <activity
             android:name="me.zhanghai.android.files.storage.AddStorageDialogActivity"
             android:label="@string/storage_add_storage_title"
             android:theme="@style/Theme.MaterialFiles.Translucent" />

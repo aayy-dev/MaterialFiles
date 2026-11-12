@@ -16,6 +16,7 @@ import me.zhanghai.android.files.documentsprovider.ExternalRootAccess
 import me.zhanghai.android.files.filelist.FileSortOptions
 import me.zhanghai.android.files.filelist.FileViewType
 import me.zhanghai.android.files.filelist.OpenApkDefaultAction
+import me.zhanghai.android.files.filelist.OpenWithDefault
 import me.zhanghai.android.files.navigation.BookmarkDirectory
 import me.zhanghai.android.files.navigation.StandardDirectorySettings
 import me.zhanghai.android.files.provider.root.RootStrategy
@@ -177,6 +178,9 @@ object Settings {
             R.string.pref_default_value_open_apk_default_action,
             OpenApkDefaultAction::class.java
         )
+
+    val OPEN_WITH_DEFAULTS: SettingLiveData<List<OpenWithDefault>> =
+        ParcelValueSettingLiveData(R.string.pref_key_open_with_defaults, emptyList())
 
     val SHOW_PDF_THUMBNAIL_PRE_28: SettingLiveData<Boolean> = BooleanSettingLiveData(
         R.string.pref_key_show_pdf_thumbnail_pre_28,

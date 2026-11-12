@@ -85,6 +85,7 @@
         <item>1</item>
         <item>2</item>
     </string-array>
+    <string name="pref_key_open_with_defaults">key_open_with_defaults</string>
     <string name="pref_key_show_pdf_thumbnail_pre_28">key_show_pdf_thumbnail_pre_28</string>
     <bool name="pref_default_value_show_pdf_thumbnail_pre_28">false</bool>
     <bool name="pref_visible_show_pdf_thumbnail_pre_28">true</bool>

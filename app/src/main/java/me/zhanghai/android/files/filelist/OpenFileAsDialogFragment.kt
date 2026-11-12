@@ -24,8 +24,6 @@ import me.zhanghai.android.files.util.args
 import me.zhanghai.android.files.util.createViewIntent
 import me.zhanghai.android.files.util.extraPath
 import me.zhanghai.android.files.util.finish
-import me.zhanghai.android.files.util.startActivitySafe
-import me.zhanghai.android.files.util.withChooser
 
 class OpenFileAsDialogFragment : AppCompatDialogFragment() {
     private val args by args<Args>()
@@ -43,8 +41,10 @@ class OpenFileAsDialogFragment : AppCompatDialogFragment() {
         val intent = args.path.fileProviderUri.createViewIntent(mimeType)
             .addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
             .apply { extraPath = args.path }
-            .withChooser()
-        startActivitySafe(intent)
+        requireContext().openFileWithApp(
+            args.path, intent, alwaysAsk = true, canRememberForFile = args.canRememberForFile,
+            showAllApps = true
+        )
         finish()
     }
 
@@ -66,5 +66,8 @@ class OpenFileAsDialogFragment : AppCompatDialogFragment() {
     }
 
     @Parcelize
-    class Args(val path: @WriteWith<ParcelableParceler> Path) : ParcelableArgs
+    class Args(
+        val path: @WriteWith<ParcelableParceler> Path,
+        val canRememberForFile: Boolean = true
+    ) : ParcelableArgs
 }
