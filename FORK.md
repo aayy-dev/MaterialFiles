@@ -1,9 +1,10 @@
 # About this fork
 
-This is [Material Files](https://github.com/zhanghai/MaterialFiles) with two changes that aren't upstream yet:
+This is [Material Files](https://github.com/zhanghai/MaterialFiles) with three changes that aren't upstream:
 
 - **SMB login fix for macOS servers.** SMBJ 0.11.5 computes the NTLM MIC incorrectly, and macOS rejects it. Only SMBJ's NTLM authenticator is replaced, so the app stays on SMBJ 0.11.5 and avoids the anonymous-login regression in newer versions. Proposed upstream in [#1672](https://github.com/zhanghai/MaterialFiles/pull/1672).
 - **DocumentsProvider.** Material Files' storages and servers appear in the system file picker. Other apps can pick folders as well as files. With DocumentsUI disabled, Material Files handles all picking. Root and Shizuku locations need the user's consent. Proposed upstream in [#1673](https://github.com/zhanghai/MaterialFiles/pull/1673).
+- **Open with chooser.** Tapping a file opens the app's own chooser instead of Android's, with "Always" for the file or for its extension. These defaults are kept in the app and can be cleared from the chooser or from Settings. It fixes unknown file types (opened as any type) being captured by an unrelated system "Always" choice. This one is fork-only: the maintainer considers default apps a system matter ([#1166](https://github.com/zhanghai/MaterialFiles/issues/1166)).
 
 Releases are on the [Releases page](https://github.com/aayy-dev/MaterialFiles/releases). Their package name is the same as upstream, but their signing key isn't, so they can't update an upstream install.
 
@@ -11,33 +12,33 @@ Releases are on the [Releases page](https://github.com/aayy-dev/MaterialFiles/re
 
 | Branch | Contents |
 |---|---|
-| `docsui-smb` (default) | Upstream `master` plus this fork's commits. Releases are tagged here. |
-| `master` | An unmodified mirror of upstream `master`. |
+| `main` (default) | `upstream` plus this fork's commits. Releases are tagged here. |
+| `upstream` | An unmodified mirror of zhanghai/MaterialFiles `master`. |
 | `pr-smb`, `pr-docsui` | The branches behind upstream PRs #1672 and #1673. Keep them in upstream's style, without fork-only files. |
 
-Only the fork's own files (`FORK.md`, `fork/`) and the commits for the two changes above sit on top of upstream.
+Only the fork's own files (`FORK.md`, `fork/`) and the commits for the changes above sit on top of `upstream`.
 
 ## Syncing with upstream
 
 ```sh
-git remote add upstream https://github.com/zhanghai/MaterialFiles.git   # once
-git fetch upstream
-git switch master && git merge --ff-only upstream/master && git push origin master
-git switch docsui-smb && git rebase master    # resolve any conflicts, then build and test
-git push --force-with-lease origin docsui-smb
+git remote add zhanghai https://github.com/zhanghai/MaterialFiles.git   # once
+git fetch zhanghai
+git switch upstream && git merge --ff-only zhanghai/master && git push origin upstream
+git switch main && git rebase upstream    # resolve any conflicts, then build and test
+git push --force-with-lease origin main
 ```
 
 Rebasing rewrites the fork's commits. Old release tags still point to the commits they were built from.
 
-If upstream merges one of the PRs, drop the matching commits from `docsui-smb` during the rebase.
+If upstream merges one of the PRs, drop the matching commits from `main` during the rebase, and delete its `pr-*` branch.
 
 ## Releasing
 
-Tags are named `v<upstream versionName>-docsui-smb.<n>`, for example `v1.7.5-docsui-smb.1`. Start `<n>` at 1 for each new upstream version, and increase it for rebuilds on the same upstream version. The version code and name inside the APK are upstream's.
+Tags are named `v<upstream versionName>-docsui-smb.<n>`, for example `v1.7.5-docsui-smb.1`. (The name predates the `main` branch, which used to be called `docsui-smb`.) Start `<n>` at 1 for each new upstream version, and increase it for rebuilds on the same upstream version. The version code and name inside the APK are upstream's.
 
 ```sh
 TAG=v1.7.5-docsui-smb.2
-git tag -a "$TAG" -m "Material Files 1.7.5 + SMB MIC fix + DocumentsProvider" docsui-smb
+git tag -a "$TAG" -m "Material Files 1.7.5 + this fork's changes" main
 fork/build-release.sh "$TAG"           # writes build/fork-releases/$TAG/
 # Install the release APK on a device and test it before publishing.
 git push origin "$TAG"
